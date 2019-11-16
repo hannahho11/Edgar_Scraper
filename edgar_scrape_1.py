@@ -47,7 +47,7 @@ def get_CIK_from_ticker(ticker):
     cik = tree.xpath('//*[@id="contentDiv"]/div[1]/div[3]/span/a/text()')[0].rsplit()[0]
     return cik #split on space to get integers
 
-# Fetches url of desired filings
+# Fetches url of desired filings given CIK
 def _get_filings_url(self, filing_type="", prior_to="", ownership="include", no_of_entries=100):
     url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + get_CIK_from_ticker(ticker) + "&type=" + filing_type + "&dateb=" + prior_to + "&owner=" +  ownership + "&count=" + str(no_of_entries)
     return url
@@ -57,7 +57,7 @@ def get_all_filings(self, filing_type="", prior_to="", ownership="include", no_o
     page = requests.get(url)
     return html.fromstring(page.content)
 
-def get_10Ks(self, no_of_documents=100000):
+def get_10Ks(self, no_of_documents=10000):
     tree = self.get_all_filings(filing_type="10-K")
     elems = tree.xpath('//*[@id="documentsbutton"]')[:no_of_documents]
     result = []
@@ -74,7 +74,7 @@ def get_10Ks(self, no_of_documents=100000):
 
 
 def check_fye():
-    docs = edgar.get_documents(tree, no_of_documents=1)
+    docs = get_10Ks(no_of_documents=1)
     pass
 
 def query_date_range(ticker):
