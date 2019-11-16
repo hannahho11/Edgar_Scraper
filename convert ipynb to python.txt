@@ -1,1 +1,0 @@
-(base) C:\Users\Hannah\Desktop\UT_Austin\Analytics_MSBA\Fall_19\Investment_theory\Sury\Edgar_Scraper> jupyter nbconvert hw_1_update1.ipynb --to python

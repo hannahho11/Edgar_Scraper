@@ -1,27 +1,27 @@
+# %%
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+Run Cell
+# %%
+class EdgarScraper:
 
+    def get_import():
+        import requests
+        from lxml import html
+        from bs4 import BeautifulSoup
+        import re
+        from datetime import date
+        import pandas as pd
 
-#def get_import():
-import requests
-from lxml import html
-from bs4 import BeautifulSoup
-import re
-from datetime import date
-import pandas as pd
-
-
-# In[4]:
-
-
-#get_import()
-
-
+Run Cell
+# %%
+'''
 # ### GET TICKER FROM USER (VALIDATION INCLUDED)
+'''
 
-# In[6]:
+Run Cell
+# %%
 
 
 #returns the company's CIK
@@ -32,22 +32,22 @@ def get_ticker():
         if comp == '':
             comp = False
         else:
-            #get the search page 
+            #get the search page
             #count = 5 so parse fast since we are just getting the name of company
             baselink = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=&dateb=&owner=exclude&count=5'
-           
+
             print(baselink)#DEBUG
-            
+
             #convert user input to lowercase for search
             comp = comp.lower()
             url = baselink.format(comp)
             page = requests.get(url)
             soup = BeautifulSoup(page.content, 'html.parser')
 
-            #see if no match is found 
+            #see if no match is found
             no_match = soup.find_all('h1')
 
-            #if not found 
+            #if not found
             if len(list(no_match))!=0:
                 print(no_match[0].text)
                 print('Please try again')
@@ -68,20 +68,22 @@ def get_ticker():
                         right_company = False
                     elif right_company.upper() == 'N':
                         comp = False
-                    else: 
+                    else:
                         return comp_name.split(' ')[-2]
 
 
 # ### GET THE DATE SEARCH RANGE A SEPRATE DATE VALIDATION
 
-# In[96]:
+
+Run Cell
+# %%
 
 
-#check if the date entered is valid 
+#check if the date entered is valid
 #returns either False or valid date as pair [start,end]
 def date_validation(start, end):
     current_date = int(date.today().strftime('%Y%m%d'))
-    
+
     #ignore if empty start and end
     if start == '' and end == '':
         return ['','']
@@ -89,12 +91,12 @@ def date_validation(start, end):
     if len(start) != 8 or len(end)!=8:
         print('Please check date entered!')
         return False
-    
+
     #see if user entered the right date
     try:
         start_test = pd.to_datetime(start,format='%Y%m%d')
         end_test = pd.to_datetime(end,format='%Y%m%d')
-    #when the user enter the wrong content - entering anyting other than numbers 
+    #when the user enter the wrong content - entering anyting other than numbers
     except:
         print('Please enter the right date (numbers only)')
         return False
@@ -111,12 +113,13 @@ def date_validation(start, end):
             return[start,end]
         else:
             right_year = True
-            return[start,end]   
-        
-        
+            return[start,end]
+
+Run Cell
+# %%
 #asking for the end year start year
 def get_year():
-    
+
     right_year = False
     while right_year == False:
         print('Date format: YYYYMMDD')
@@ -128,7 +131,7 @@ def get_year():
 
 # ### GET FILE TYPE (10-K ONLY SO FAR)
 
-# In[53]:
+# %%
 
 
 #get the file type
@@ -145,22 +148,9 @@ def get_file_type():
             else:
                 print('Please check the file type!')
                 filetype = False
-    
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[71]:
+# %%
 
 
 # def get_files(CIK, search_range,file_type):
@@ -184,14 +174,13 @@ print(soup)
 
 
 
-# In[65]:
-
+# %%
 
 def main():
     comp_name = get_ticker()
     search_range = get_year()
     file_type = get_file_type()
 
-
-
-
+# %%
+if __name__ == '__main__':
+    get_ticker.run()
