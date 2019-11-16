@@ -10,33 +10,47 @@ FOR EXTRA CREDIT (10 points):  Validate the figures by scraping the data from go
 '''
 import edgar as e
 import requests
-
+from lxml import html
 
 def query_ticker():
     return input('Enter a ticker:')
 
 def get_company_name(symbol):
-    
+
     url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={}&region=1&lang=en".format(symbol) #yahoo internal site. https://beautifier.io/
     result = requests.get(url).json()
 
     for x in result['ResultSet']['Result']:
         if x['symbol'] == symbol:
-            return x['name']
+            company_name = x['name']
+            return company_name
 
 # Given a ticker, looks in yahoo's db for query_ticker
 def verify_ticker(ticker):
 
-    # If ticker exists, Yahho returns company company_name, return True
-    if get_company_name(ticker): # Yahoo returned company name
+    # If ticker exists, Yahoo returns company name
+    if get_company_name(ticker):
         return True
     # Yahoo returns None, return False
-    else:
+    elif ticker != "":
         print ('Invalid ticker')
         return False
 
-def query_date_range():
-    input("Please enter Year-Ended Range (note: XYZ Corp. has a FYE 12/31)\nStart Date: yyyy\nEnd Date:  yyyy")
+def get_request(href):
+    page = requests.get(href)
+    return html.fromstring(page.content)
+
+def get_CIK_from_ticker(ticker):
+    tree = get_request("https://www.sec.gov/cgi-bin/browse-edgar?CIK=" + ticker)
+    cik = tree.xpath('//*[@id="contentDiv"]/div[1]/div[3]/span/a/text()')[0].rsplit()[0]
+    return cik #split on space to get integers
+
+
+def check_fye():
+    pass
+
+def query_date_range(ticker):
+    print("Please enter Year-Ended Range (note:", get_company_name(ticker),"has a FYE 12/31)\nStart Date: yyyy\nEnd Date:  yyyy")
     pass
 
 def verify_date_range():
@@ -51,11 +65,15 @@ def extract_fcf_data():
 def export():
     pass
 
-ticker = ""
-while not verify_ticker(ticker): #while ticker not valid
-    ticker = query_ticker()
+# Control flow
+TICKER = ""
+while not verify_ticker(TICKER): #while ticker not valid
+    TICKER = query_ticker()
 
-query_date_range()
+query_date_range(TICKER)
+cik = get_CIK_from_ticker(TICKER)
+print(cik)
+
 verify_date_range()
 collect_fin_statements()
 extract_fcf_data()
