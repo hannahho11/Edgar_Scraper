@@ -15,6 +15,7 @@ from lxml import html
 def query_ticker():
     return input('Enter a ticker:')
 
+# Given a ticker, looks in Yahoo's internal database for company name
 def get_company_name(symbol):
 
     url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={}&region=1&lang=en".format(symbol) #yahoo internal site. https://beautifier.io/
@@ -25,7 +26,6 @@ def get_company_name(symbol):
             company_name = x['name']
             return company_name
 
-# Given a ticker, looks in yahoo's db for query_ticker
 def verify_ticker(ticker):
 
     # If ticker exists, Yahoo returns company name
@@ -36,45 +36,104 @@ def verify_ticker(ticker):
         print ('Invalid ticker')
         return False
 
+# Given a link, saves, converts to html, returns html
 def get_request(href):
     page = requests.get(href)
     return html.fromstring(page.content)
 
+# Convert ticker input to CIK
 def get_CIK_from_ticker(ticker):
     tree = get_request("https://www.sec.gov/cgi-bin/browse-edgar?CIK=" + ticker)
     cik = tree.xpath('//*[@id="contentDiv"]/div[1]/div[3]/span/a/text()')[0].rsplit()[0]
     return cik #split on space to get integers
 
+# Fetches url of desired filings
+def _get_filings_url(self, filing_type="", prior_to="", ownership="include", no_of_entries=100):
+    url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + get_CIK_from_ticker(ticker) + "&type=" + filing_type + "&dateb=" + prior_to + "&owner=" +  ownership + "&count=" + str(no_of_entries)
+    return url
+
+def get_all_filings(self, filing_type="", prior_to="", ownership="include", no_of_entries=100):
+    url = self._get_filings_url(filing_type, prior_to, ownership, no_of_entries)
+    page = requests.get(url)
+    return html.fromstring(page.content)
+
+def get_10Ks(self, no_of_documents=100000):
+    tree = self.get_all_filings(filing_type="10-K")
+    elems = tree.xpath('//*[@id="documentsbutton"]')[:no_of_documents]
+    result = []
+    for elem in elems:
+        url = BASE_URL + elem.attrib["href"]
+        content_page = get_request(url)
+        table = content_page.find_class("tableFile")[0]
+        last_row = table.getchildren()[-1]
+        href = last_row.getchildren()[2].getchildren()[0].attrib["href"]
+        href = BASE_URL + href
+        doc = get_request(href)
+        result.append(doc)
+    return result
+
 
 def check_fye():
+    docs = edgar.get_documents(tree, no_of_documents=1)
     pass
 
 def query_date_range(ticker):
     print("Please enter Year-Ended Range (note:", get_company_name(ticker),"has a FYE 12/31)\nStart Date: yyyy\nEnd Date:  yyyy")
-    pass
+    start = input('Start year (yyyy):')
+    end = input('End year (yyyy):')
+    return start, end
 
-def verify_date_range():
-    pass
+def get_ipo_year(ticker):
+    return 1994
 
-def collect_fin_statements():
+def verify_date_range(start_year, end_year):
+    if end > start:
+        return False
+    elif start < get_ipo_year(ticker):
+        print ('Date range start year before company IPO year')
+        return False
+    elif end > 2019:
+        print ('End year is in the future')
+        return False
+    else :
+        return True
+
+# Given company, start year, end year, return relevant list of company 10-K's
+def collect_fin_statements(start_year, end_year):
+    get_10Ks()
     pass
 
 def extract_fcf_data():
     pass
 
+# Given FCF data, writes to a csv
 def export():
     pass
 
-# Control flow
-TICKER = ""
-while not verify_ticker(TICKER): #while ticker not valid
-    TICKER = query_ticker()
+def another_query_needed(): #Add if user inputs invalid****************************
+    query = input('Another query needed? y/n').lower()
+    if query == 'y' or query == 'yes':
+        return True
+    else:
+        return False
 
-query_date_range(TICKER)
-cik = get_CIK_from_ticker(TICKER)
-print(cik)
+while True:
+    # Control flow
+    TICKER = ""
+    while not verify_ticker(TICKER): #while ticker not valid
+        TICKER = query_ticker()
 
-verify_date_range()
-collect_fin_statements()
-extract_fcf_data()
-export()
+    query_date_range(TICKER)
+    cik = get_CIK_from_ticker(TICKER)
+
+    START_YEAR = None
+    END_YEAR = None
+    while not verify_date_range(START_YEAR, END_YEAR): #while date range not valid
+        START_YEAR, END_YEAR = query_date_range(TICKER)
+
+    all_statements_between_years = collect_fin_statements(START_YEAR, END_YEAR)
+    fcf = extract_fcf_data(all_statements_between_years)
+    export(fcf)
+
+    if not another_query_needed():
+        exit
