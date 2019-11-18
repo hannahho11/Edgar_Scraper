@@ -15,6 +15,8 @@ FOR EXTRA CREDIT (10 points):  Validate the figures by scraping the data from go
 import edgar as e
 import requests
 from lxml import html
+import re
+# from bs4 import BeautifulSoup
 
 def query_ticker():
     return input('Enter a ticker:').upper()
@@ -41,9 +43,9 @@ def verify_ticker(ticker):
         return False
 
 # Given a link, saves, converts to html, returns html
-def get_request(href):
-    page = requests.get(href)
-    return html.fromstring(page.content)
+def get_request(url):
+    response = requests.get(url)
+    return html.fromstring(response.content)
 
 # Convert ticker input to CIK
 def get_CIK_from_ticker(ticker):
@@ -56,26 +58,48 @@ def get_CIK_from_ticker(ticker):
 #     url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + ticker + "&type=" + filing_type + "&dateb=" + prior_to + "&owner=" +  ownership + "&count=" + str(no_of_entries)
 #     return url
 
-def get_index_years(ticker, start_year, end_year):
-    url = 'https://www.sec.gov/Archives/edgar/full-index/' + start_year + '/QTR' + '1/'
-    page = requests.get(url)
-    return html.fromstring(page.content)
+def get_indexes(ticker, document, start_year, end_year):
+    # Search through all quarters in year range for relevant document
+    directories = []
+    base_url = 'https://www.sec.gov/Archives/edgar/full-index/'
+    for year in range(start_year, end_year+1):
+        for quarter in range(1,5):
+            url = base_url + str(year) + '/QTR' + str(quarter) + '/'#sitemap.quarterlyindex.xml not in all folders
+            page = get_request(url)
+            # directories.append(html.fromstring(page.content)) #DELETE
+            links_list = page.xpath('//*[@id="main-content"]/table/tr/td/a') #DEBUG any html object: .text_content()
 
+            # directories.append(links)
+
+            # Filter for links leading to quarterly index of all filings
+            links_with_quarterly_index = []
+            for link in links_list:
+                if re.findall('quarterlyindex\d', link.text_content()):
+                    quarterly_index_url = url + link.xpath('./@href')
+                    links_with_quarterly_index.append()
+
+
+            for i in indexes:
+                index = i.xpath('./@href')
+
+            import IPython
+            IPython.embed()
+            exit
+            # print(xml_directories)
+            # import IPython
+            # IPython.embed()
+#            break
+            # print("DIRECTORIES", directories) #DEBUG
+            # print("length", len(directories)) #DEBUG
+    return directories
+#xpath //*[@id="main-content"]/table/tr[15]/td[1]/a #tbody deleted - inserted by browser
 # Gets 10-K's from all types of filings
 def get_10Ks(ticker, start_year, end_year):
-    tree = get_index_years(ticker, start_year, end_year)
-    elems = tree.xpath('//*[@id="documentsbutton"]')
-    result = []
-    for elem in elems:
-        url = BASE_URL + elem.attrib["href"]
-        content_page = get_request(url)
-        table = content_page.find_class("tableFile")[0]
-        last_row = table.getchildren()[-1]
-        href = last_row.getchildren()[2].getchildren()[0].attrib["href"]
-        href = BASE_URL + href
-        doc = get_request(href)
-        result.append(doc)
-    return result
+    document = "10-K"
+    directories = get_directories(ticker, document, start_year, end_year)
+
+            # print(indexes)
+        pass
 
 
 def check_fye():
@@ -114,7 +138,7 @@ def verify_date_range(start_year, end_year, ticker):
 # Given company, start year, end year, return relevant list of company 10-K's
 def collect_fin_statements(ticker, start_year, end_year): #scale add: get_10Ks=True
     # get_index_years(start_year, end_year)
-    get_10Ks(ticker)
+    get_10Ks(ticker,start_year, end_year)
     pass
 
 def extract_fcf_data():

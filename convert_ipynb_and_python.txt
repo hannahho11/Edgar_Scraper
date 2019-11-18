@@ -1,3 +1,0 @@
-jupyter nbconvert hw_1_update1.ipynb --to python
-
-ipynb-py-convert
