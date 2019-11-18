@@ -53,52 +53,64 @@ def get_CIK_from_ticker(ticker):
     cik = tree.xpath('//*[@id="contentDiv"]/div[1]/div[3]/span/a/text()')[0].rsplit()[0]
     return cik #split on space to get integers
 
+# Gets index of all companies, all filings w/in specified years
 def get_index_links(start_year, end_year):
     # Search through all quarters in year range for relevant document
     directories = []
     base_url = 'https://www.sec.gov/Archives/edgar/full-index/'
+    links_with_quarterly_index = []
+
     for year in range(start_year, end_year+1):
         for quarter in range(1,5):
             url = base_url + str(year) + '/QTR' + str(quarter) + '/' #sitemap.quarterlyindex.xml not in all folders
             page = get_request(url)
             links_list = page.xpath('//*[@id="main-content"]/table/tr/td/a') #for DEBUG any html object: .text_content()
 
-            # Filter for links leading to quarterly index of all filings
-            links_with_quarterly_index = []
+            # Filters for links leading to quarterly index of all filings
             for link in links_list:
                 if re.findall('quarterlyindex\d', link.text_content()):
                     quarterly_index_url = url + link.xpath('./@href')[0]
                     links_with_quarterly_index.append(quarterly_index_url)
-            # import IPython
-            # IPython.embed()
-            # exit
+        # import IPython
+        # IPython.embed()
+        # exit
     return links_with_quarterly_index
 
-# Gets 10-K's from all types of filings
+# Gets 10-K's from all types of filings, all companies, all years
 def get_10Ks(ticker, cik, start_year, end_year, document='10-K'):
     links_with_quarterly_index = get_index_links(start_year, end_year)
     for url in links_with_quarterly_index:
         page = get_request(url)
         all_comps_all_filings_links_list = page.xpath('url/loc')
 
-        #Filter for target company
-        target_all_filing_urls = []
-        for link in all_comps_all_filings_links_list:
-            if re.findall(cik, link.text_content()):
-                target_all_filing_urls.append(link.text_content())
-        for 
-        import IPython
-        IPython.embed()
-        exit
+    #Filter for target company
+    company_all_filing_urls = []
+    for element in all_comps_all_filings_links_list:
+        # Filter using matching CIK
+        print(cik, element.text_content())
+        if re.findall(cik.lstrip('0'), element.text_content()):
+            print ('MATCH')
+            company_all_filing_urls.append(link.text_content())
+
+    # Filter for filing type
+    the_10Ks = []
+    for url in company_all_filing_urls:
+        page = get_request(url)
+        if re.findall('10-K', page.text_content()):
+            the_10Ks.append(page)
+
+    import IPython
+    IPython.embed()
+    exit
     #for each link, make a request and look for matching cik AND 10-K
-        pass
+    return the_10Ks
 
-def check_fye():
-    docs = get_10Ks(no_of_documents=1)
-    pass
+def get_fye(cik):
+    # docs = get_10Ks(no_of_documents=1)
+    return str(1111)
 
-def query_date_range(ticker):
-    print("Please enter Year-Ended Range (note:", get_company_name(ticker),"has a FYE 12/31)")
+def query_date_range(ticker, cik):
+    print("Please enter Year-Ended Range (note:", get_company_name(ticker),"has a FYE", get_fye(cik))
     while True:
         try:
             start = int(input('Start year (yyyy):'))
@@ -159,13 +171,14 @@ while True:
     while not verify_ticker(TICKER): # query for ticker until get valid ticker
         TICKER = query_ticker()
 
+    print(get_company_name(TICKER))
     CIK = get_CIK_from_ticker(TICKER) # fetch CIK from ticker
     print('CIK: ', CIK)
 
     START_YEAR = None
     END_YEAR = None
     while not verify_date_range(START_YEAR, END_YEAR, TICKER): # query for date range until date range valid
-        START_YEAR, END_YEAR = query_date_range(TICKER)
+        START_YEAR, END_YEAR = query_date_range(TICKER, CIK)
 
     all_statements_between_years = collect_fin_statements(TICKER, CIK, START_YEAR, END_YEAR) # if date range valid, collect relevant statements
     fcf = extract_fcf_data(all_statements_between_years) # extract needed data for FCF statement
