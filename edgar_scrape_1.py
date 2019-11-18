@@ -53,54 +53,45 @@ def get_CIK_from_ticker(ticker):
     cik = tree.xpath('//*[@id="contentDiv"]/div[1]/div[3]/span/a/text()')[0].rsplit()[0]
     return cik #split on space to get integers
 
-# Fetches url of desired filings given CIK
-# def _get_filings_url(ticker, filing_type="", prior_to="", ownership="include", no_of_entries=100):
-#     url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + ticker + "&type=" + filing_type + "&dateb=" + prior_to + "&owner=" +  ownership + "&count=" + str(no_of_entries)
-#     return url
-
-def get_indexes(ticker, document, start_year, end_year):
+def get_index_links(start_year, end_year):
     # Search through all quarters in year range for relevant document
     directories = []
     base_url = 'https://www.sec.gov/Archives/edgar/full-index/'
     for year in range(start_year, end_year+1):
         for quarter in range(1,5):
-            url = base_url + str(year) + '/QTR' + str(quarter) + '/'#sitemap.quarterlyindex.xml not in all folders
+            url = base_url + str(year) + '/QTR' + str(quarter) + '/' #sitemap.quarterlyindex.xml not in all folders
             page = get_request(url)
-            # directories.append(html.fromstring(page.content)) #DELETE
-            links_list = page.xpath('//*[@id="main-content"]/table/tr/td/a') #DEBUG any html object: .text_content()
-
-            # directories.append(links)
+            links_list = page.xpath('//*[@id="main-content"]/table/tr/td/a') #for DEBUG any html object: .text_content()
 
             # Filter for links leading to quarterly index of all filings
             links_with_quarterly_index = []
             for link in links_list:
                 if re.findall('quarterlyindex\d', link.text_content()):
-                    quarterly_index_url = url + link.xpath('./@href')
-                    links_with_quarterly_index.append()
-
-
-            for i in indexes:
-                index = i.xpath('./@href')
-
-            import IPython
-            IPython.embed()
-            exit
-            # print(xml_directories)
+                    quarterly_index_url = url + link.xpath('./@href')[0]
+                    links_with_quarterly_index.append(quarterly_index_url)
             # import IPython
             # IPython.embed()
-#            break
-            # print("DIRECTORIES", directories) #DEBUG
-            # print("length", len(directories)) #DEBUG
-    return directories
-#xpath //*[@id="main-content"]/table/tr[15]/td[1]/a #tbody deleted - inserted by browser
+            # exit
+    return links_with_quarterly_index
+
 # Gets 10-K's from all types of filings
-def get_10Ks(ticker, start_year, end_year):
-    document = "10-K"
-    directories = get_directories(ticker, document, start_year, end_year)
+def get_10Ks(ticker, cik, start_year, end_year, document='10-K'):
+    links_with_quarterly_index = get_index_links(start_year, end_year)
+    for url in links_with_quarterly_index:
+        page = get_request(url)
+        all_comps_all_filings_links_list = page.xpath('url/loc')
 
-            # print(indexes)
+        #Filter for target company
+        target_all_filing_urls = []
+        for link in all_comps_all_filings_links_list:
+            if re.findall(cik, link.text_content()):
+                target_all_filing_urls.append(link.text_content())
+        for 
+        import IPython
+        IPython.embed()
+        exit
+    #for each link, make a request and look for matching cik AND 10-K
         pass
-
 
 def check_fye():
     docs = get_10Ks(no_of_documents=1)
@@ -136,9 +127,9 @@ def verify_date_range(start_year, end_year, ticker):
         return True
 
 # Given company, start year, end year, return relevant list of company 10-K's
-def collect_fin_statements(ticker, start_year, end_year): #scale add: get_10Ks=True
+def collect_fin_statements(ticker, cik, start_year, end_year): #scale add: get_10Ks=True
     # get_index_years(start_year, end_year)
-    get_10Ks(ticker,start_year, end_year)
+    get_10Ks(ticker, cik, start_year, end_year)
     pass
 
 def extract_fcf_data():
@@ -168,14 +159,15 @@ while True:
     while not verify_ticker(TICKER): # query for ticker until get valid ticker
         TICKER = query_ticker()
 
-    cik = get_CIK_from_ticker(TICKER) # fetch CIK from ticker
+    CIK = get_CIK_from_ticker(TICKER) # fetch CIK from ticker
+    print('CIK: ', CIK)
 
     START_YEAR = None
     END_YEAR = None
     while not verify_date_range(START_YEAR, END_YEAR, TICKER): # query for date range until date range valid
         START_YEAR, END_YEAR = query_date_range(TICKER)
 
-    all_statements_between_years = collect_fin_statements(TICKER, START_YEAR, END_YEAR) # if date range valid, collect relevant statements
+    all_statements_between_years = collect_fin_statements(TICKER, CIK, START_YEAR, END_YEAR) # if date range valid, collect relevant statements
     fcf = extract_fcf_data(all_statements_between_years) # extract needed data for FCF statement
     calculate_fct(EBIT, NI, FCFF, FCFE, CCF) # calculate FCF line items
     export(fcf) # export FCF line items to formatted csv

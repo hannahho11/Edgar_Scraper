@@ -1,0 +1,8 @@
+jupyter nbconvert hw_1_update1.ipynb --to python
+
+ipynb-py-convert
+ipynb-py-convert examples/plot.py examples/plot.ipynb
+
+ipynb-py-convert hw_1_update1.py hw_1_update1.ipynb
+
+ipynb-py-convert hw_1_update1.ipynb hw_1_update1.py
