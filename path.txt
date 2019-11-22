@@ -1,0 +1,4 @@
+C:\Users\Hannah\Desktop\UT_Austin\Analytics_MSBA\Fall_19\Investment_theory\Sury\Edgar_Scraper
+hw_1_update1
+
+python Desktop\UT_Austin\Analytics_MSBA\Fall_19\Investment_theory\Sury\Edgar_Scraper\edgar_scrape_1.py
