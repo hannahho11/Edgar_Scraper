@@ -87,6 +87,7 @@ def get_10Ks(ticker, cik, start_year, end_year, document='10-K'):
     company_all_filing_urls = []
     for element in all_comps_all_filings_links_list:
         # Filter using matching CIK
+
         print(cik, element.text_content())
         if re.findall(cik.lstrip('0'), element.text_content()):
             print ('MATCH')
