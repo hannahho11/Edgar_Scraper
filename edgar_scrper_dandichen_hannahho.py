@@ -8,6 +8,8 @@ import pandas as pd
 import requests
 import urllib.request
 from IPython.display import display_html
+import re
+
 
 #returns the company's CIK
 def get_ticker():
@@ -26,25 +28,26 @@ def get_ticker():
             page = requests.get(url)
             soup = BeautifulSoup(page.content, 'html.parser')
 
-            #see if no match is found 
-            no_match = soup.find_all('h1')
+            #see if no match is found
+            no_match = soup.find_all('h1') #returns list of descendants w/ matching  tags
 
-            #if not found 
+            #if not found
+
             if len(list(no_match))!=0:
                 print(no_match[0].text)
                 print('Please try again')
                 comp = False
             #when there is a match, check if right match
-            else:
+
+            else: #QUESTION: ask about symbols
                 comp_name = list(soup.find_all('span', class_ = 'companyName'))[0].\
                 text.replace('(see all company filings)','')
+                # right_company = False
 
-                right_company = False
                 #ask the user if they is what they are looking for
                 right_company = False
                 while right_company == False:
-                    print('')
-                    print('')
+                    print('\n\n')
                     print('Is this the company you are looking for? (Press Y for yes N for no)')
                     right_company = input(comp_name)
                     if right_company.upper() != 'Y' and right_company.upper() !='N':
@@ -54,77 +57,98 @@ def get_ticker():
                     else: 
                         return comp_name.split(' ')[-2]
 
-
-
-#check if the date entered is valid 
+#check if the date entered is valid
 #returns either False or valid date as pair [start,end]
-def date_validation(start, end):
+def validate_start_date(start, end, earliest_date):
+
     current_date = int(date.today().strftime('%Y%m%d'))
-    
-    #ignore if empty start and end
-    if start == '' and end == '':
-        return ['','']
-    #check format length
-    if len(start) != 8 or len(end)!=8:
-        print('Please check date entered!')
+
+    if start == '':
+        print ('Start date is', earliest_date)
+        return current_date
+
+    if int(start) > current_date:
+        print('Please enter a start date after the end date.')
         return False
-    
-    #see if user entered the right date
+
+    if int(start) < earliest_date:
+        print ('Start date prior to May 2009. Dates prior to May 2009 are not supported.')
+        return False
+
+    #if start empty, place earliest available date
+
+    else:
+        return start
+
+    #check if user enters anything other than numbers
     try:
         start_test = pd.to_datetime(start,format='%Y%m%d')
-        end_test = pd.to_datetime(end,format='%Y%m%d')
-    #when the user enter the wrong content - entering anyting other than numbers 
     except:
-        print('Please enter the right date (numbers only)')
+        print('Please enter numbers only. Date format: YYYYMMDD')
         return False
-    start = int(start)
-    end = int(end)
-    #check if reasonable begin &end date
-    if start> current_date or start < 20090501 or end <20090501 or end < start:
-        print('Please check the year entry. The application do not support search prior to May 2009.')
+
+    if len(start) != 8:
+        print('Please check date format: YYYYMMDD')
         return False
-    else:
-        #if user's end year > this year, then end year would be this year
-        if end > current_date:
-            end = current_date
-            return[start,end]
-        else:
-            right_year = True
-            return[start,end]   
-        
-        
+
+def validate_end_date(start_ok, end, earliest_date):
+
+    current_date = int(date.today().strftime('%Y%m%d'))
+
+    #if end empty or greater than current date, place current date
+    if end == '' or int(end) > current_date:
+        print ('End date is', current_date)
+        return current_date
+
+    if int(end) < earliest_date:
+        print('End dates prior to', earliest_date, 'are not supported.')
+        return False
+
+    if int(end) < int(start):
+        print('Please enter end date after the start date.')
+        return False
+
+    #check if user enters anything other than numbers
+    try:
+        end_test = pd.to_datetime(end,format='%Y%m%d')
+    except:
+        print('Please enter numbers only. Date format: YYYYMMDD')
+        return False
+
+    if len(end)!= 8:
+        print('Please check date format: YYYYMMDD')
+        return False
+
 #asking for the end year start year
 #return the final search range. format: list[startdate, enddate]
-def get_year():
-    
-    right_year = False
-    while right_year == False:
-        print('Date format: YYYYMMDD')
-        start_year = input('optional - Search Start year (Press enter to pass):')
-        end_year = input('optional - Search end year (Press enter to pass):')
-        right_year = date_validation(start_year , end_year)
-    return right_year
+def get_years():
+    earliest_date = 20090501
+    print('Date format: YYYYMMDD')
+    start_year_input = input('optional - Search Start year (Press enter to set as earliest available date May 1, 2009):')
+    end_year_input = input('optional - Search end year (Press enter to set as latest available date):')
+    valid_start_year = validate_start_date(start_year_input, end_year_input, earliest_date) #stores either False or a valid_start_year
 
+    while valid_start_year == False: #if start date invalid, repeat until proper start date gathered
+        start_year = input('optional - Search Start year (Press enter to set as earliest available date, May 1, 2009):')
+        valid_start_year = validate_start_date(start_year,end_year_input, earliest_date)
 
+    valid_end_year = validate_end_date(valid_start_year,end_year_input, earliest_date)
+    while valid_end_year == False:
+        end_year_input = input('optional - Search end year (Press enter to set as latest available date):')
+        valid_end_year = validate_end_date(valid_start_year,end_year_input, earliest_date) #stores either False or a valid_end_year
+
+    return [valid_start_year, valid_end_year]
 
 #get the file type
 #so far only returns '10-k'
 #returns true or false
 def get_file_type():
-    filetype = False
-    while filetype == False:
-        filetype = input ('what document are you looking for?')
-        if filetype == '':
-            filetype = False
-        else:
-            if filetype == '10k' or filetype =='10 k' or filetype =='10-k'\
-            or filetype =='10K' or filetype =='10 K' or filetype =='10-K':
-                return '10-K'
-            else:
-                print('Please check the file type!')
-                filetype = False
-
-
+    filetype = input ('What document are you looking for?')
+    while not re.match('10[ -]?[kK]', filetype):
+        filetype = input ('Invalid document.\n\nWhat document are you looking for?')
+    else:
+        return '10-K'
+      
 #returns a page worth of html
 def get_files(CIK, search_range,file_type):
 
@@ -155,14 +179,15 @@ def get_files_df(soup,search_range):
 
     #create list that contain each file's information
     for row in file_rows:
-        
         #gets file date
         file_type = row.find_all('td',{'nowrap':'nowrap'})[0].text
         file_date = row.find_all('td')[3].text.replace('-','')
         file_link = sec_link+row.find_all('td',{'nowrap':'nowrap'})[1].find_all('a', href = True)[0]['href']
 
         #this gets every item's file link
-        if int(file_date) >int(search_range[0]) and int(file_date)<int(search_range[1]) and file_type == '10-K':
+
+        if int(file_date) > int(search_range[0]) and int(file_date)<int(search_range[1]) and file_type == '10-K':
+
             f_types.append(file_type)
             f_dates.append(file_date)
             f_links.append(file_link)
@@ -186,7 +211,7 @@ def filtered_df(search_range,file_type,files_table):
 #     type_filtered = date_filtered[date_filtered['file type']=='10-K']
     return files_table
 
-#get links for file 
+#get links for file
 #returns a list of links
 def get_list_doc_link_text(filtered_df):
     sec_link = 'http://sec.gov'
@@ -200,6 +225,7 @@ def get_list_doc_link_text(filtered_df):
         doc_full_link = sec_link + complete_file_link
         doc_links.append(doc_full_link)
     return doc_links
+
 def get_link(filtered_df):
     return filtered_df['file link']
 
@@ -210,6 +236,7 @@ def calculation(links):
     for link in links:
         #read the txt from link
         broken_xml = urllib.request.urlopen(link).read().decode('utf-8')
+
         #break the thing into pages
         pages = broken_xml.split('page-break')
         #list the documents that we are looking for 
@@ -217,6 +244,7 @@ def calculation(links):
         
         #if the name of statements are found in any of the page
         #put the found statement's name and the text content into a list 
+
         doc_list = []
         for page in pages:
             idx = pages.index(page)
@@ -225,21 +253,21 @@ def calculation(links):
                 if i.upper() in page:
                     key = i
                     found = +1
-                    
 
             if found>=1:
                 pair = [key,page]
                 doc_list.append(pair)
-        
+
         #write a html that contains the statements for testing purpose
         file = open('test.html','w')
         for i in doc_list:
             file.write(i[1])
         file.close()
-        
-        #create a list called statements to include the followin
+
+        #create a list called statements to include the following
         #include the name of the statemets and the actual statemet with numbers in dataframe
-        #dataframe is raw data 
+        #dataframe is raw data
+
         statements = []
         for pair in doc_list:
             name = pair[0]
@@ -259,8 +287,7 @@ def calculation(links):
             #append the pair([name, df])
             pair = [name,df]
             statements.append(pair)
-            
-        
+
         #create a clean statement list
         clean_statements = []
         for pair in statements:
@@ -286,7 +313,7 @@ def calculation(links):
 
                 pair = [name,clean]
                 clean_statements.append(pair)
-            
+
             #clean stocker holder's equity table
             #same code with column selection different
             if name == 'CONSOLIDATED STATEMENTS OF STOCKHOLDERS':
@@ -307,7 +334,7 @@ def calculation(links):
 
                 pair = [name,clean]
                 clean_statements.append(pair)
-        
+
         #set variables used for calculation
         revenue = 0
         COGS = 0
@@ -319,7 +346,7 @@ def calculation(links):
         OCF =0
         CAPEX =0
         NWC = 0
-        
+
         #grab numbers from the dataframes
         for statement in clean_statements:
             name = statement[0]
@@ -345,15 +372,14 @@ def calculation(links):
                 previous_nwc =  previous_nwc_asset- previous_nwc_liability
                 current_nwc =  current_nwc_asset- current_nwc_liability
                 NWC = current_nwc - previous_nwc
-                
+
         #calculating numbers
         GrossProfit = revenue - COGS
         EBIT  = GrossProfit - OPEX - DEPEX
         NOPAT = EBIT -tax
         OCF = NOPAT +DEPEX
         FCFF = OCF - CAPEX-NWC
-        
-        
+
         ##print result
         print('============================================')
         print('Calculation')
@@ -384,25 +410,20 @@ def calculation(links):
 #print calculation for fcff
 def main():
     comp_name = get_ticker()
-    search_range = get_year()
+    search_range = get_years() #date range
     file_type = get_file_type()
     initial_search_html = get_files(comp_name,search_range,file_type)
     file_link_df = get_files_df(initial_search_html,search_range)
-    filtered = filtered_df(search_range,file_type,file_link_df)
+    filtered = filtered_df(search_range,file_type,file_link_df) #QUESTION: function not used
     files_list_links = get_list_doc_link_text(filtered)
     print('\n')
     print('\n')
     calculation(files_list_links)
-    user = input('would you like to do another search? (please press n for no)')
-    if user =='I really need another search please allow it the password is: Hook\' em!':
-        main()
-    else:
-        print('Thank you!')
+    while True:
+        user = input('Would you like to do another search? (y\\n)')
+        if user.lower() == 'n':
+            print ('Thank you')
+            exit()
 
-
-main() 
-    
-    
-
-
-
+while True:
+    main()
