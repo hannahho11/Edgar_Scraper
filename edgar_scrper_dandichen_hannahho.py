@@ -10,6 +10,7 @@ import urllib.request
 from IPython.display import display_html
 import re
 
+
 #returns the company's CIK
 def get_ticker():
     comp = False
@@ -18,10 +19,10 @@ def get_ticker():
         if comp == '':
             comp = False
         else:
-            #get the search page
+            #get the search page 
             #count = 5 so parse fast since we are just getting the name of company
             baselink = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=&dateb=&owner=exclude&count=5'
-            #search lowercase
+            #search lowercase 
             comp = comp.lower()
             url = baselink.format(comp)
             page = requests.get(url)
@@ -31,11 +32,13 @@ def get_ticker():
             no_match = soup.find_all('h1') #returns list of descendants w/ matching  tags
 
             #if not found
+
             if len(list(no_match))!=0:
                 print(no_match[0].text)
                 print('Please try again')
                 comp = False
             #when there is a match, check if right match
+
             else: #QUESTION: ask about symbols
                 comp_name = list(soup.find_all('span', class_ = 'companyName'))[0].\
                 text.replace('(see all company filings)','')
@@ -45,17 +48,14 @@ def get_ticker():
                 right_company = False
                 while right_company == False:
                     print('\n\n')
-                    # print('')
                     print('Is this the company you are looking for? (Press Y for yes N for no)')
                     right_company = input(comp_name)
                     if right_company.upper() != 'Y' and right_company.upper() !='N':
                         right_company = False
                     elif right_company.upper() == 'N':
                         comp = False
-                    else:
+                    else: 
                         return comp_name.split(' ')[-2]
-
-
 
 #check if the date entered is valid
 #returns either False or valid date as pair [start,end]
@@ -148,21 +148,7 @@ def get_file_type():
         filetype = input ('Invalid document.\n\nWhat document are you looking for?')
     else:
         return '10-K'
-
-    # filetype = False
-    # while filetype == False:
-    #     filetype = input ('What document are you looking for?')
-        # if filetype == '':
-        #     filetype = False
-        # else:
-        #     if filetype == '10k' or filetype =='10 k' or filetype =='10-k'\
-        #     or filetype =='10K' or filetype =='10 K' or filetype =='10-K':
-        #         return '10-K'
-        #     else:
-        #         print('Please check the file type!')
-        #         filetype = False
-
-
+      
 #returns a page worth of html
 def get_files(CIK, search_range,file_type):
 
@@ -193,14 +179,15 @@ def get_files_df(soup,search_range):
 
     #create list that contain each file's information
     for row in file_rows:
-
         #gets file date
         file_type = row.find_all('td',{'nowrap':'nowrap'})[0].text
         file_date = row.find_all('td')[3].text.replace('-','')
         file_link = sec_link+row.find_all('td',{'nowrap':'nowrap'})[1].find_all('a', href = True)[0]['href']
 
         #this gets every item's file link
+
         if int(file_date) > int(search_range[0]) and int(file_date)<int(search_range[1]) and file_type == '10-K':
+
             f_types.append(file_type)
             f_dates.append(file_date)
             f_links.append(file_link)
@@ -252,11 +239,12 @@ def calculation(links):
 
         #break the thing into pages
         pages = broken_xml.split('page-break')
-        #list of documents we are looking for
+        #list the documents that we are looking for 
         documents = ['Consolidated Statements of Cash Flows','Consolidated Statements of Operations', 'Consolidated Statements of Comprehensive Income', 'Consolidated Balance Sheets', 'CONSOLIDATED STATEMENTS OF STOCKHOLDERS']
+        
+        #if the name of statements are found in any of the page
+        #put the found statement's name and the text content into a list 
 
-        #if the name of statements are found in any of the pages
-        #put the found statement's name and the text content into a list
         doc_list = []
         for page in pages:
             idx = pages.index(page)
@@ -265,7 +253,6 @@ def calculation(links):
                 if i.upper() in page:
                     key = i
                     found = +1
-
 
             if found>=1:
                 pair = [key,page]
@@ -277,9 +264,10 @@ def calculation(links):
             file.write(i[1])
         file.close()
 
-        #create a list called statements to include the followin
+        #create a list called statements to include the following
         #include the name of the statemets and the actual statemet with numbers in dataframe
         #dataframe is raw data
+
         statements = []
         for pair in doc_list:
             name = pair[0]
@@ -299,7 +287,6 @@ def calculation(links):
             #append the pair([name, df])
             pair = [name,df]
             statements.append(pair)
-
 
         #create a clean statement list
         clean_statements = []
@@ -351,7 +338,7 @@ def calculation(links):
         #set variables used for calculation
         revenue = 0
         COGS = 0
-        GrossProfit= 0
+        GrossProfit= 0 
         OPEX = 0
         DEPEX = 0
         tax = 0
@@ -392,7 +379,6 @@ def calculation(links):
         NOPAT = EBIT -tax
         OCF = NOPAT +DEPEX
         FCFF = OCF - CAPEX-NWC
-
 
         ##print result
         print('============================================')
