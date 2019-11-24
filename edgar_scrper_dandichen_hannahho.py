@@ -1,4 +1,5 @@
-
+#Hannah Ho and Dandi Chen
+#edgar_scrper_dandichen_hannahho
 import requests
 from lxml import html
 from bs4 import BeautifulSoup
