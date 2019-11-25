@@ -1,5 +1,20 @@
-#Hannah Ho and Dandi Chen
-#edgar_scrper_dandichen_hannahho
+'''
+edgar_scrper_dandichen_hannahho
+by Hannah Ho and Dandi Chen
+
+1.Query the User for a stock ticker (e.g., "IBM")
+2. Verify that the ticker is valid by returning the full name of the company (e.g., "IBM Corp." or other appropriate regulatory name) or query the User again
+3. Query the User for Pertinent Year-Ended Dates (Program should check whether fiscal years are calendar years or otherwise and inform User ahead of time).
+Example:  "Please enter Year-Ended Range (note: XYZ Corp. has a FYE 12/31):"  Start Date:  yyyy   End Date:  yyyy
+4. Next, go through the appropriate financial statements (check appropriate filings, but 10K's are a good place to start) to collect data.
+If data is missing, report why the program cannot be completed to the User and restart another query--but be sure that it is a valid denial.
+5. Taking the financial data, prepare a professional Free Cash Flow Statement (as detailed as is possible or that you see fit, but at least including the following:
+EBIT, NI, FCFF, FCFE, CCF).  Report these figures and also validate them by performing computations for FCFF, FCFE, and CCF using the alternate method
+(shown in class).
+6. Offer to report these to a data file (preferably Excel)
+7. Ask if another query is needed, or end program. Control flow.
+FOR EXTRA CREDIT (10 points):  Validate the figures by scraping the data from google or yahoo and report these numbers as well as any variances.
+'''
 import requests
 from lxml import html
 from bs4 import BeautifulSoup
@@ -9,7 +24,7 @@ import pandas as pd
 import requests
 import urllib.request
 from IPython.display import display_html
-import re
+import csv
 
 #test with date range 20160101 to 20170101
 
@@ -329,12 +344,16 @@ def calculation(links):
         for pair in statements:
             name = pair[0]
             table = pair[1]
-            #separate way to clean other statements
+
+            #separate way to clean non-stockholder statements
             if name != 'CONSOLIDATED STATEMENTS OF STOCKHOLDERS':
+
                 #get the final number of columns
                 column_number = int(len(table.columns)/3)
+
                 #get the final column names
                 column_name = table.columns.drop_duplicates().tolist()
+
                 #get the line names
                 column_index = table.index.tolist()
                 clean = pd.DataFrame()
@@ -356,6 +375,9 @@ def calculation(links):
                 column_number = int(len(table.columns)/3)
                 column_name = table.columns.drop_duplicates().tolist()
                 column_index = table.index.tolist()
+
+                print ('column_index',column_index)
+
                 clean = pd.DataFrame()
                 clean['index'] = column_index
                 clean = clean.set_index('index')
@@ -382,19 +404,31 @@ def calculation(links):
         OCF =0
         CAPEX =0
         NWC = 0
+        interest = 0
+        dLTD = 0
+        NI = 0
+        tax_rate = 0.35
 
         #grab numbers from the dataframes
         for statement in clean_statements:
             name = statement[0]
             chart = statement[1]
+            print('\n\nStatement\n\n', statement)
+
             if name == 'Consolidated Statements of Cash Flows':
                 DEPEX = int(chart.loc['Depreciation of property and equipment including internal-use software and website development and other amortization including capitalized content costs'][0].replace('(','').replace(',',''))
                 tax = int(chart.loc['Cash paid for income taxes net of refunds'][0].replace('(','').replace(')','').replace(',',''))
                 CAPEX = int(chart.loc['Purchases of property and equipment including internal-use software and website development net'][0].replace('(','').replace(')','').replace(',',''))
+
             if name == 'Consolidated Statements of Operations':
+                # COGS =
                 revenue = int(chart.loc['Total net sales'][0].replace('(','').replace(',',''))
                 OPEX = int(chart.loc['Total operating expenses'][0].replace('(','').replace(',',''))
+                NI = int(chart.loc['Net income loss'][0].replace('(','').replace(',',''))
+                interest = int(chart.loc['Interest expense'][0].replace('(','').replace(',',''))
+
             if name == 'Consolidated Balance Sheets':
+                # print()
                 #capex calcualtion
                 cap_current = int(chart.loc['Property and equipment net'][0].replace('(','').replace(',',''))
                 cap_previous = int(chart.loc['Property and equipment net'][1].replace('(','').replace(',',''))
@@ -409,6 +443,12 @@ def calculation(links):
                 current_nwc =  current_nwc_asset- current_nwc_liability
                 NWC = current_nwc - previous_nwc
 
+                #change in LTD
+                current_ltd = int(chart.loc['Long-term debt'][0].replace('(','').replace(',',''))
+                previous_ltd = int(chart.loc['Long-term debt'][1].replace('(','').replace(',',''))
+                dLTD = current_ltd - previous_ltd
+
+
         #calculating numbers
         GrossProfit = revenue - COGS
         EBIT  = GrossProfit - OPEX - DEPEX
@@ -416,32 +456,52 @@ def calculation(links):
         OCF = NOPAT +DEPEX
         FCFF = OCF - CAPEX-NWC
 
+        #Add
+        CCF = interest*(1-tax_rate) - dLTD
+        FCFE = FCFF - CCF
+
+        list_to_write = [('Net Income', NI),('Calculation',''),('Gross Profit', GrossProfit),\
+                    ('OPEX',OPEX), ('DEPEX',DEPEX), ('EBIT',EBIT), ('Tax', tax), ('NOPAT',NOPAT),\
+                    ('DEPEX', DEPEX), ('OCF', OCF), ('CAPEX', CAPEX), ('NWC', NWC), ('FCFF', FCFF),\
+                    ('CCF', CCF), ('FCFE', FCFE)]
+
         ##print result
+        print('============================================')
+        print('Net Income','\t',NI)
         print('============================================')
         print('Calculation')
         print('--------------------------------------------')
-        print('--------------------------------------------')
-        print ('revenue','\t',revenue)
-        print('COGS','\t\t','-',COGS)
-        print('----------------------')
+        # print('--------------------------------------------')
+        # print ('Revenue','\t',revenue)
+        # print('COGS','\t\t','-',COGS)
+        # print('----------------------')
         print('Gross Profit','\t',GrossProfit)
         print('OPEX','\t\t','-',OPEX)
         print('DEPEX','\t\t','-',DEPEX)
-        print('----------------------')
+        print('---------------------------')
         print('EBIT','\t\t',EBIT)
-        print('tax','\t\t','-',tax)
-        print('----------------------')
+        print('Tax','\t\t','-',tax)
+        print('---------------------------')
         print('NOPAT','\t\t',NOPAT)
         print('DEPEX','\t\t','+',DEPEX)
-        print('---------------------')
+        print('---------------------------')
         print('OCF','\t\t',OCF)
         print('CAPEX','\t\t','-',CAPEX)
         print('NWC','\t\t','-',NWC)
-        print('---------------------')
+        print('---------------------------')
         print('FCFF','\t\t',FCFF)
+        print('---------------------------')
+        print('CCF','\t\t',CCF)
+        print('FCFE','\t\t',FCFE)
         print('============================================')
 
+        return list_to_write
 
+def create_csv(filename, list_to_write):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for item in list_to_write:
+            writer.writerow(item)
 
 #print calculation for fcff
 def main():
@@ -453,9 +513,18 @@ def main():
     filtered = filtered_df(search_range,file_type,file_link_df) #temporarily unused function. passes through files table
     files_list_links = get_list_doc_link_text(filtered)
     print('\n\n')
-    calculation(files_list_links)
+    list_to_write = calculation(files_list_links)
     while True:
-        user = input('Would you like to do another search? (y\\n)')
+        user = input('Would you like to export free cash flow statement? (y/n)')
+        if user.lower() == 'n':
+            break
+        else:
+            create_csv('AMZN_test.csv', list_to_write)
+            break
+
+
+    while True:
+        user = input('Would you like to do another search? (y/n)')
         if user.lower() == 'n':
             print ('Thank you')
             exit()
