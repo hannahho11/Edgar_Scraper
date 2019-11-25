@@ -15,6 +15,16 @@ EBIT, NI, FCFF, FCFE, CCF).  Report these figures and also validate them by perf
 7. Ask if another query is needed, or end program. Control flow.
 FOR EXTRA CREDIT (10 points):  Validate the figures by scraping the data from google or yahoo and report these numbers as well as any variances.
 '''
+'''
+Test with:
+AMZN
+Date range 20160101 to 20170101
+'''
+'''
+Outputs files:
+test.thml
+AMZN_test.csv
+'''
 import requests
 from lxml import html
 from bs4 import BeautifulSoup
@@ -26,7 +36,7 @@ import urllib.request
 from IPython.display import display_html
 import csv
 
-#test with date range 20160101 to 20170101
+
 
 #returns the company's CIK
 def get_ticker():
