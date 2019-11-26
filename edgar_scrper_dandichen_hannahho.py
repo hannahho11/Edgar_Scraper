@@ -1,5 +1,6 @@
 '''
 edgar_scrper_dandichen_hannahho
+11/24/2019
 by Hannah Ho and Dandi Chen
 
 1.Query the User for a stock ticker (e.g., "IBM")
